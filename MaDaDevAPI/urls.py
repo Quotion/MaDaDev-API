@@ -11,13 +11,15 @@ from drf_yasg import openapi
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from django.contrib import admin
-from django.urls import path, include, re_path
+from django.urls import path, include
 from django.conf.urls.static import static
 
 
 router = routers.DefaultRouter()
-router.register('users', UsersViewSet, basename="UserModels")
-router.register('auth', AuthAPIView, basename="LoginUser")
+router.register('users', UsersViewSet, basename="User Models")
+router.register('auth', AuthAPIView, basename="Login User")
+router.register('products', ProductAPIView, basename="Project's Product")
+router.register('product_types', ProductTypeAPIView, basename="Project's type")
 
 
 activation_router = routers.DefaultRouter()
@@ -43,7 +45,6 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    path('oauth/', include('oauth2_provider.urls', namespace='oauth2_provider')),
     path('accounts/', include('django.contrib.auth.urls')),
 
     path('api/v1/', include(router.urls)),

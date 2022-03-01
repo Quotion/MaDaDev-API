@@ -1,4 +1,4 @@
-from main.models import User, Product, TypeProduct
+from main.models import User, Product, TypeProduct, MiniNews
 from MaDaDevAPI import settings
 
 from rest_framework import serializers
@@ -158,6 +158,7 @@ class LoginSerializer(serializers.Serializer):  # noqa
         refresh_token = RefreshToken.for_user(self.user)
 
         return {
+            'id': self.user.id,
             'username': self.user.username,
             'access_token': access_token,
             'refresh_token': refresh_token
@@ -263,3 +264,14 @@ class ProductTypeSerializer(serializers.Serializer):  # noqa
     class Meta:
         model = TypeProduct
         fields = ['product_type_id', 'product_type_name']
+
+
+class MiniNewsSerializer(serializers.Serializer):  # noqa
+    mini_news_id = serializers.IntegerField(read_only=True)
+    mn_title = serializers.CharField(max_length=128)
+    mn_desc = serializers.CharField(max_length=128)
+    mn_date = serializers.DateField()
+
+    class Meta:
+        model = MiniNews
+        fields = ['mini_news_id', 'mn_title', 'mn_desc', 'mn_date']

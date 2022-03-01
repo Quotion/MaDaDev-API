@@ -36,6 +36,13 @@ class Product(models.Model):
         db_table = 'product'
 
 
+class MiniNews(models.Model):
+    mini_news_id = models.AutoField(primary_key=True, null=False)
+    mn_title = models.CharField(max_length=128, null=False, default="Title of mini news")
+    mn_desc = models.TextField(null=False, default="Description of mini news")
+    mn_date = models.DateField(auto_now=True)
+
+
 class DBManager(models.Manager):
     def __init__(self, using, *args, **kwargs):
         self.db_using = using

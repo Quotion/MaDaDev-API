@@ -8,13 +8,14 @@ from rest_framework.response import Response
 
 from activation.views import ConfirmEmail, PasswordChangedEmail, PasswordRecoveryEmail, ReConfirmEmail
 from main import schemas
-from main.schemas import UsersSchemas, AuthUserSchemas, ProductSchemas, ProductTypeSchemas
+from main.schemas import UsersSchemas, AuthUserSchemas, ProductSchemas, ProductTypeSchemas, MiniNewsSchemas
 from main.serializers import *
 
 
 class UsersViewSet(mixins.CreateModelMixin,
                    mixins.DestroyModelMixin,
                    mixins.ListModelMixin,
+                   mixins.RetrieveModelMixin,
                    viewsets.GenericViewSet):
     queryset = User.objects.all()
     serializer_class = CreateUserSerializer
@@ -38,6 +39,15 @@ class UsersViewSet(mixins.CreateModelMixin,
             return [permission() for permission in self.permission_classes_by_action[self.action]]
         except KeyError:
             return [permission() for permission in self.permission_classes]
+
+    @swagger_auto_schema(tags=["user"],
+                         responses=UsersSchemas.response_user_retrieve(),
+                         security=[schemas.bearer()],
+                         operation_id="read user")
+    def retrieve(self, request, *args, **kwargs):
+        response = super(UsersViewSet, self).retrieve(request, *args, **kwargs)
+
+        return response
 
     @swagger_auto_schema(tags=["user"],
                          manual_parameters=UsersSchemas.send_list(),
@@ -87,7 +97,6 @@ class UsersViewSet(mixins.CreateModelMixin,
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     @swagger_auto_schema(tags=["user"],
-                         request_body=UsersSchemas.request_body_id(),
                          manual_parameters=UsersSchemas.manual_request_update(),
                          responses=UsersSchemas.response_list(),
                          security=[schemas.bearer()],
@@ -122,7 +131,6 @@ class UsersViewSet(mixins.CreateModelMixin,
         return Response(serializer.data, status.HTTP_200_OK, headers=headers)
 
     @swagger_auto_schema(tags=["user"],
-                         path=UsersSchemas.request_body_id(),
                          responses=UsersSchemas.response_delete(),
                          security=[schemas.bearer()],
                          operation_id="delete user")
@@ -146,9 +154,9 @@ class AuthAPIView(viewsets.ViewSet):
         except KeyError:
             return [permission() for permission in self.permission_classes]
 
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['get'])
     @swagger_auto_schema(tags=["auth"],
-                         request_body=AuthUserSchemas.login_request(),
+                         manual_parameters=AuthUserSchemas.login_request(),
                          responses=AuthUserSchemas.response_login(),
                          security=[schemas.basic()],
                          operation_id="login")
@@ -211,9 +219,9 @@ class AuthAPIView(viewsets.ViewSet):
 
             return Response({'status': "ok"}, status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['get'])
     @swagger_auto_schema(tags=["auth"],
-                         request_body=AuthUserSchemas.send_email_recovery_request(),
+                         manual_parameters=AuthUserSchemas.send_email_recovery_request(),
                          responses=AuthUserSchemas.send_email_recovery_response(),
                          security=[schemas.basic()],
                          operation_id="send password recovery token")
@@ -262,6 +270,7 @@ class AuthAPIView(viewsets.ViewSet):
 class ProductAPIView(mixins.CreateModelMixin,
                      mixins.DestroyModelMixin,
                      mixins.ListModelMixin,
+                     mixins.RetrieveModelMixin,
                      viewsets.GenericViewSet):
     permission_classes = [permissions.DjangoModelPermissionsOrAnonReadOnly]
     serializer_class = ProductSerializer
@@ -295,6 +304,17 @@ class ProductAPIView(mixins.CreateModelMixin,
         return response
 
     @swagger_auto_schema(tags=["product"],
+                         responses=ProductTypeSchemas.response_list(),
+                         operation_id="product")
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Продукт в одиночном экземпляре
+        ===
+        """
+        response = super(ProductAPIView, self).retrieve(request, *args, **kwargs)
+        return response
+
+    @swagger_auto_schema(tags=["product"],
                          responses=ProductSchemas.response_delete(),
                          security=[schemas.bearer()],
                          operation_id="delete product")
@@ -311,6 +331,7 @@ class ProductAPIView(mixins.CreateModelMixin,
 class ProductTypeAPIView(mixins.CreateModelMixin,
                          mixins.DestroyModelMixin,
                          mixins.ListModelMixin,
+                         mixins.RetrieveModelMixin,
                          viewsets.GenericViewSet):
     permission_classes = [permissions.DjangoModelPermissionsOrAnonReadOnly]
     serializer_class = ProductTypeSerializer
@@ -342,6 +363,17 @@ class ProductTypeAPIView(mixins.CreateModelMixin,
         return response
 
     @swagger_auto_schema(tags=["product"],
+                         responses=ProductTypeSchemas.response_list(),
+                         operation_id="product type")
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Категория продукта в одиночном экземпляре
+        ===
+        """
+        response = super(ProductTypeAPIView, self).retrieve(request, *args, **kwargs)
+        return response
+
+    @swagger_auto_schema(tags=["product"],
                          responses=ProductTypeSchemas.response_delete(),
                          security=[schemas.bearer()],
                          operation_id="delete product type")
@@ -351,4 +383,62 @@ class ProductTypeAPIView(mixins.CreateModelMixin,
         ===
         """
         response = super(ProductTypeAPIView, self).list(request, *args, **kwargs)
+        return response
+
+
+class MiniNewsAPIView(mixins.CreateModelMixin,
+                      mixins.DestroyModelMixin,
+                      mixins.ListModelMixin,
+                      mixins.RetrieveModelMixin,
+                      viewsets.GenericViewSet):
+    permission_classes = [permissions.DjangoModelPermissionsOrAnonReadOnly]
+    serializer_class = ProductTypeSerializer
+    queryset = MiniNews.objects.all()
+
+    @swagger_auto_schema(tags=["mini_news"],
+                         request_body=MiniNewsSchemas.mini_news_request(),
+                         responses=MiniNewsSchemas.mini_news_response(),
+                         security=[schemas.bearer()],
+                         operation_id="create mini news")
+    def create(self, request, *args, **kwargs):
+        """
+        Создание мини новостей
+        ===
+        """
+        response = super(MiniNewsAPIView, self).create(request, *args, **kwargs)
+        return response
+
+    @swagger_auto_schema(tags=["mini_news"],
+                         manual_parameters=MiniNewsSchemas.send_list_mini_news(),
+                         responses=MiniNewsSchemas.response_list(),
+                         operation_id="get list mini news")
+    def list(self, request, *args, **kwargs):
+        """
+        Список мини новостей
+        ===
+        """
+        response = super(MiniNewsAPIView, self).list(request, *args, **kwargs)
+        return response
+
+    @swagger_auto_schema(tags=["mini_news"],
+                         responses=MiniNewsSchemas.response_list(),
+                         operation_id="mini news")
+    def retrieve(self, request, *args, **kwargs):
+        """
+        КМини новость в одиночном экземпляре
+        ===
+        """
+        response = super(MiniNewsAPIView, self).retrieve(request, *args, **kwargs)
+        return response
+
+    @swagger_auto_schema(tags=["mini_news"],
+                         responses=MiniNewsSchemas.response_delete(),
+                         security=[schemas.bearer()],
+                         operation_id="delete mini news")
+    def destroy(self, request, *args, **kwargs):
+        """
+        Удалить мини новость
+        ===
+        """
+        response = super(MiniNewsAPIView, self).list(request, *args, **kwargs)
         return response

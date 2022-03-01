@@ -1,6 +1,6 @@
 from drf_yasg import openapi
 
-from rest_framework import status
+from rest_framework import status, serializers
 
 
 def bearer() -> dict:
@@ -31,6 +31,42 @@ def get_status_forbidden():
 
 
 class UsersSchemas:
+    @staticmethod
+    def request_retrieve_user_id():
+        return openapi.Parameter(
+            'id',
+            openapi.IN_QUERY,
+            type=openapi.TYPE_OBJECT,
+            description="Первичный ключ пользователя"
+        )
+
+    @staticmethod
+    def response_user_retrieve():
+        return {
+            status.HTTP_200_OK: openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'username': openapi.Schema(type=openapi.TYPE_STRING),
+                    'email': openapi.Schema(type=openapi.TYPE_STRING),
+                    'is_email_verified': openapi.Schema(type=openapi.TYPE_BOOLEAN,
+                                                        description="Подтверждена ли почта"),
+                    'image': openapi.Schema(type=openapi.TYPE_STRING,
+                                            description="URI к аватару пользователя"),
+                    'ip': openapi.Schema(type=openapi.TYPE_STRING,
+                                         description="IP при регистрации"),
+                    'last_ip': openapi.Schema(type=openapi.TYPE_STRING),
+                    'is_staff': openapi.Schema(type=openapi.TYPE_BOOLEAN,
+                                               description="Относится ли пользователь к администрации"),
+                    'is_superuser': openapi.Schema(type=openapi.TYPE_BOOLEAN,
+                                                   description="Суперадмин ли пользователь"),
+                    'date_joined': openapi.Schema(type=openapi.TYPE_STRING),
+                    'last_login': openapi.Schema(type=openapi.TYPE_STRING),
+                }
+            ),
+            status.HTTP_401_UNAUTHORIZED: get_status_unauthorized(),
+            status.HTTP_403_FORBIDDEN: get_status_forbidden()
+        }
+
     @staticmethod
     def send_list():
         return [
@@ -128,18 +164,6 @@ class UsersSchemas:
         }
 
     @staticmethod
-    def request_body_id():
-        return openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            required=['id'],
-            properties={
-                'id': openapi.Schema(
-                    openapi.IN_PATH,
-                    type=openapi.TYPE_INTEGER,
-                    description="Первичный ключ пользователя")
-            })
-
-    @staticmethod
     def manual_request_update():
         return [
             openapi.Parameter(
@@ -183,17 +207,18 @@ class UsersSchemas:
 class AuthUserSchemas:
     @staticmethod
     def login_request():
-        return openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            required=['username', 'password'],
-            properties={
-                'username': openapi.Schema(
-                    type=openapi.TYPE_STRING,
-                    description="Уникальный логин пользователя"),
-                'password': openapi.Schema(
-                    type=openapi.TYPE_INTEGER,
-                    description="Пароль пользователя")
-            })
+        return [
+            openapi.Parameter(
+                'username',
+                openapi.IN_QUERY,
+                type=openapi.TYPE_INTEGER,
+                description="Уникальный логин пользователя"),
+            openapi.Parameter(
+                'password',
+                openapi.IN_QUERY,
+                type=openapi.TYPE_INTEGER,
+                description="Пароль пользователя")
+            ]
 
     @staticmethod
     def response_login():
@@ -202,10 +227,11 @@ class AuthUserSchemas:
                 title='answer',
                 type=openapi.TYPE_OBJECT,
                 properties={
+                    'id': openapi.Schema(type=openapi.TYPE_INTEGER, description="ID пользователя"),
                     'username': openapi.Schema(type=openapi.TYPE_STRING, description="Логин пользователя"),
                     'access_token': openapi.Schema(type=openapi.TYPE_STRING,
                                                    description="Токен для идентификации пользователя"),
-                    'refresh_token': openapi.Schema(type=openapi.TYPE_BOOLEAN, description="Подтверждена ли почта"),
+                    'refresh_token': openapi.Schema(type=openapi.TYPE_STRING, description="Подтверждена ли почта")
                 }
             ),
             status.HTTP_400_BAD_REQUEST: openapi.Schema(
@@ -263,28 +289,23 @@ class AuthUserSchemas:
 
     @staticmethod
     def send_email_recovery_request():
-        return openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                'username': openapi.Schema(
-                    type=openapi.TYPE_STRING,
-                    description="Имя пользователя"),
-                'email': openapi.Schema(
-                    type=openapi.TYPE_STRING,
-                    description="Почта пользователя")
-            })
+        return [
+            openapi.Parameter(
+                'username',
+                openapi.IN_QUERY,
+                type=openapi.TYPE_INTEGER,
+                description="Уникальный логин пользователя"),
+            openapi.Parameter(
+                'email',
+                openapi.IN_QUERY,
+                type=openapi.TYPE_INTEGER,
+                description="Почта пользователя")
+        ]
 
     @staticmethod
     def send_email_recovery_response():
         return {
-            status.HTTP_204_NO_CONTENT: openapi.Schema(
-                title='answer',
-                type=openapi.TYPE_OBJECT,
-                properties={
-                    'status': openapi.Schema(type=openapi.TYPE_STRING, description="Код ответа")
-                },
-                description="Письмо с токеном отправлено"
-            ),
+            status.HTTP_204_NO_CONTENT: openapi.TYPE_STRING,
             status.HTTP_400_BAD_REQUEST: openapi.Schema(
                 title='bad request',
                 type=openapi.TYPE_OBJECT,
@@ -438,11 +459,11 @@ class ProductTypeSchemas:
         return [
             openapi.Parameter('limit',
                               openapi.IN_QUERY,
-                              description="Лимит по количеству продуктов проекта",
+                              description="Лимит по количеству категорий продуктов проекта",
                               type=openapi.TYPE_INTEGER),
             openapi.Parameter('offset',
                               openapi.IN_QUERY,
-                              description="Сдвиг на число продуктов проекта",
+                              description="Сдвиг на число категорий продуктов проекта",
                               type=openapi.TYPE_INTEGER)
         ]
 
@@ -463,8 +484,91 @@ class ProductTypeSchemas:
                         description="Массив содержащий объект в виде полей категорий продуктов проекта",
                         items=openapi.Schema(
                             type=openapi.TYPE_OBJECT, properties={
-                                'product_type_id': openapi.Schema(type=openapi.TYPE_STRING),
+                                'product_type_id': openapi.Schema(type=openapi.TYPE_INTEGER),
                                 'product_type_name': openapi.Schema(type=openapi.TYPE_STRING),
+                            })
+                    )}
+            ),
+            status.HTTP_401_UNAUTHORIZED: get_status_unauthorized(),
+            status.HTTP_403_FORBIDDEN: get_status_forbidden()
+        }
+
+    @staticmethod
+    def response_delete():
+        return {
+            status.HTTP_204_NO_CONTENT: openapi.TYPE_STRING,
+            status.HTTP_400_BAD_REQUEST: openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description="Не правильно введен ID"
+            ),
+            status.HTTP_401_UNAUTHORIZED: get_status_unauthorized(),
+            status.HTTP_403_FORBIDDEN: get_status_forbidden()
+        }
+
+
+class MiniNewsSchemas:
+    @staticmethod
+    def mini_news_request():
+        return openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'mn_title': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description="Заголовок новости"),
+                'mn_desc': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description="Описание новости"),
+            },
+            required=['mn_title', 'mn_desc'])
+
+    @staticmethod
+    def mini_news_response():
+        return {
+            status.HTTP_200_OK: openapi.Schema(
+                title='Mini news create',
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING, description="Мини новость создана")
+                },
+            ),
+            status.HTTP_401_UNAUTHORIZED: get_status_unauthorized(),
+            status.HTTP_403_FORBIDDEN: get_status_forbidden()
+        }
+
+    @staticmethod
+    def send_list_mini_news():
+        return [
+            openapi.Parameter('limit',
+                              openapi.IN_QUERY,
+                              description="Лимит по количеству мини новостей",
+                              type=openapi.TYPE_INTEGER),
+            openapi.Parameter('offset',
+                              openapi.IN_QUERY,
+                              description="Сдвиг на число мини новостей",
+                              type=openapi.TYPE_INTEGER)
+        ]
+
+    @staticmethod
+    def response_list():
+        return {
+            status.HTTP_200_OK: openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'count': openapi.Schema(type=openapi.TYPE_INTEGER,
+                                            description="Количество выданных мини новостей в поле `results`"),
+                    'next': openapi.Schema(type=openapi.TYPE_INTEGER,
+                                           description="Номер следующий страницы с данными"),
+                    'previous': openapi.Schema(type=openapi.TYPE_INTEGER,
+                                               description="Номер предыдущей страницы с данными"),
+                    'results': openapi.Schema(
+                        type=openapi.TYPE_ARRAY,
+                        description="Массив содержащий объект в виде полей мини новостей",
+                        items=openapi.Schema(
+                            type=openapi.TYPE_OBJECT, properties={
+                                'mini_news_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                'mn_title': openapi.Schema(type=openapi.TYPE_STRING),
+                                'mn_desc': openapi.Schema(type=openapi.TYPE_STRING),
+                                'mn_date': openapi.Schema(type=openapi.TYPE_STRING),
                             })
                     )}
             ),
